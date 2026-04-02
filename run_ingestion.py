@@ -42,7 +42,7 @@ def load_queries(input_file: Path) -> list[str]:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-source hazard ingestion runner")
     p.add_argument("--input-file", type=Path, required=True)
-    p.add_argument("--sources", default="iris", help="쉼표 구분 source key")
+    p.add_argument("--sources", default="hcis", help="쉼표 구분 source key")
     p.add_argument("--output-dir", type=Path, default=Path("./output"))
     p.add_argument("--timeout-sec", type=float, default=20.0)
     p.add_argument("--proxy", default="", help="HTTP/HTTPS proxy URL (예: http://user:pass@host:port)")
