@@ -10,6 +10,9 @@ from pathlib import Path
 from source_adapters.base import RunContext
 
 
+APP_VERSION = "2026.04-ipcs-all"
+
+
 def load_queries(input_file: Path) -> list[str]:
     if input_file.suffix.lower() == ".csv":
         with input_file.open("r", encoding="utf-8-sig", newline="") as fp:
@@ -41,6 +44,7 @@ def load_queries(input_file: Path) -> list[str]:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-source hazard ingestion runner")
+    p.add_argument("--version", action="version", version=f"run_ingestion.py {APP_VERSION}")
     p.add_argument("--input-file", type=Path, help="질의 CSV/XLSX 파일")
     p.add_argument("--sources", default="hcis", help="쉼표 구분 source key")
     p.add_argument(

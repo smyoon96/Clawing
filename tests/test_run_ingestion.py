@@ -19,3 +19,12 @@ def test_parse_args_with_input_file(monkeypatch: pytest.MonkeyPatch, tmp_path):
     args = parse_args()
     assert args.ipcs_all is False
     assert args.input_file == csv_path
+
+
+def test_parse_args_version(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]):
+    monkeypatch.setattr("sys.argv", ["run_ingestion.py", "--version"])
+    with pytest.raises(SystemExit) as exc:
+        parse_args()
+    out = capsys.readouterr().out
+    assert exc.value.code == 0
+    assert "run_ingestion.py" in out

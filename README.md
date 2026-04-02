@@ -47,3 +47,17 @@ python run_ingestion.py --ipcs-all --sources "ipcs" --output-dir ./output
 ## IPCS 정제 수집 원칙
 - IPCS adapter는 문서 전체를 그대로 row로 적재하지 않고, 유해성 중심 신호만 추출합니다.
 - 주요 추출 대상: CAS 번호, H/EUH 코드, 독성 수치 키워드(LD50/LC50/NOAEL/LOAEL), 유해성 키워드 기반 요약 문장.
+
+## Troubleshooting
+- `run_ingestion.py: error: the following arguments are required: --input-file`가 나온다면, 구버전 스크립트를 실행 중일 가능성이 큽니다.
+- 아래로 현재 실행 파일 버전을 먼저 확인하세요.
+
+```bash
+python run_ingestion.py --version
+```
+
+- 그리고 같은 경로에서 아래 IPCS 전체 수집 명령을 실행하세요.
+
+```bash
+python run_ingestion.py --ipcs-all --sources "ipcs" --output-dir ./output
+```
