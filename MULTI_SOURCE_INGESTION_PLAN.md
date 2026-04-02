@@ -50,6 +50,7 @@ input(cas/name list)
 |---|---|---|---|---|---|
 | nite | 일본 NITE | 웹/PDF | 유·위해성 보고서 | P2 | High |
 | hcis | 호주 HCIS | 웹 | GHS 분류 | P2 | Med |
+| ipcs | IPCS (EHC/PIM/JMPR/JECFA) | 웹/보고서 | 독성 레퍼런스 | P1 | Med |
 | jcheck | J-CHECK | 웹 | 물질 특성/규제 | P2 | Med |
 
 ## 5) Adapter 인터페이스
@@ -76,7 +77,7 @@ class BaseAdapter:
 - 단위 표준화 사전 매핑(`mg/kg bw` 등)
 
 ## 8) 단계별 구현 로드맵
-1. P1 소스 1개(HCIS) adapter 구현
+1. P1 소스 2개(HCIS, IPCS) adapter 구현
 2. 공통 스키마/정규화기 완성
 3. 품질 검증 + 리포트 생성
 4. P2 소스 확장(NITE/J-CHECK)
