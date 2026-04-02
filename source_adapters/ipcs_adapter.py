@@ -19,6 +19,27 @@ class IPCSAdapter(BaseAdapter):
         "https://www.inchem.org/pages/jecfa.html",
     )
 
+    HAZARD_KEYWORDS: tuple[str, ...] = (
+        "tox",
+        "toxic",
+        "poison",
+        "fatal",
+        "carcin",
+        "mutagen",
+        "repro",
+        "irrit",
+        "sensiti",
+        "corros",
+        "neuro",
+        "hepat",
+        "renal",
+        "respirat",
+        "cns",
+        "target organ",
+        "risk",
+        "hazard",
+    )
+
     @staticmethod
     def _fetch(url: str, timeout: float) -> tuple[str, str]:
         req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -61,6 +82,24 @@ class IPCSAdapter(BaseAdapter):
 
         return out
 
+    @classmethod
+    def _extract_hazard_sentences(cls, doc_text: str) -> list[str]:
+        candidates = re.split(r"(?<=[.!?])\s+|\n+", doc_text)
+        out: list[str] = []
+        seen: set[str] = set()
+        for sent in candidates:
+            s = " ".join(sent.split()).strip()
+            if len(s) < 30:
+                continue
+            low = s.lower()
+            if any(k in low for k in cls.HAZARD_KEYWORDS):
+                key = s[:220]
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(key)
+        return out
+
     @staticmethod
     def _is_all_query(query: str) -> bool:
         return query.strip().lower() in {"*", "all", "__all__", "ipcs_all"}
@@ -90,31 +129,6 @@ class IPCSAdapter(BaseAdapter):
     ) -> list[UnifiedRow]:
         doc_text = self._text_only(doc_html)
         rows: list[UnifiedRow] = []
-
-        # 문서 제목 / 레퍼런스 row
-        rows.append(
-            UnifiedRow(
-                source_name=self.source_key,
-                query_input=query,
-                cas_number=query,
-                substance_name=query,
-                endpoint=index_label,
-                field_name="ipcs_document",
-                raw_value=index_label,
-                comparator="",
-                numeric_value="",
-                unit="",
-                qualifier="",
-                hazard_code="",
-                hazard_category="",
-                study_guideline="",
-                test_conditions="",
-                section_path=f"ipcs.index.{self._safe_token(index_url)}",
-                evidence_url=doc_url,
-                evidence_file=str(evidence_file),
-                retrieved_at_utc=self.now_utc_iso(),
-            )
-        )
 
         # CAS 번호
         for cas in sorted(set(re.findall(r"\b\d{2,7}-\d{2}-\d\b", doc_text))):
@@ -168,7 +182,7 @@ class IPCSAdapter(BaseAdapter):
                 )
             )
 
-        # 수치 힌트
+        # 수치 기반 유해성 지표
         for endpoint, pat in [
             ("EHC", r"EHC\s*\d+[^\.\n]{0,120}"),
             ("PIM", r"PIM\s*\d+[^\.\n]{0,120}"),
@@ -203,16 +217,17 @@ class IPCSAdapter(BaseAdapter):
                     )
                 )
 
-        if len(rows) == 1:
+        # 문장 기반 유해성 요약(키워드 필터)
+        for sentence in self._extract_hazard_sentences(doc_text):
             rows.append(
                 UnifiedRow(
                     source_name=self.source_key,
                     query_input=query,
                     cas_number=query,
                     substance_name=query,
-                    endpoint=index_label,
-                    field_name="search_result_text",
-                    raw_value=" ".join(doc_text.split()[:60]),
+                    endpoint="HAZARD_SUMMARY",
+                    field_name="hazard_summary",
+                    raw_value=sentence,
                     comparator="",
                     numeric_value="",
                     unit="",
@@ -221,14 +236,27 @@ class IPCSAdapter(BaseAdapter):
                     hazard_category="",
                     study_guideline="",
                     test_conditions="",
-                    section_path="ipcs.document.fallback",
+                    section_path="ipcs.document.summary",
                     evidence_url=doc_url,
                     evidence_file=str(evidence_file),
                     retrieved_at_utc=self.now_utc_iso(),
                 )
             )
 
-        return rows
+        if not rows:
+            return []
+
+        # 중복 제거: 동일 필드/원문/근거URL
+        deduped: list[UnifiedRow] = []
+        seen_keys: set[tuple[str, str, str]] = set()
+        for row in rows:
+            key = (row.field_name, row.raw_value, row.evidence_url)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            deduped.append(row)
+
+        return deduped
 
     def collect(self, query: str, ctx: RunContext) -> list[UnifiedRow]:
         fetch_all = self._is_all_query(query)

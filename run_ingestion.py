@@ -41,8 +41,13 @@ def load_queries(input_file: Path) -> list[str]:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-source hazard ingestion runner")
-    p.add_argument("--input-file", type=Path, required=True)
+    p.add_argument("--input-file", type=Path, help="질의 CSV/XLSX 파일")
     p.add_argument("--sources", default="hcis", help="쉼표 구분 source key")
+    p.add_argument(
+        "--ipcs-all",
+        action="store_true",
+        help="입력 파일 없이 IPCS(EHC/PIM/JMPR/JECFA) 전체 문서를 수집(query=all)",
+    )
     p.add_argument("--output-dir", type=Path, default=Path("./output"))
     p.add_argument("--timeout-sec", type=float, default=20.0)
     p.add_argument("--proxy", default="", help="HTTP/HTTPS proxy URL (예: http://user:pass@host:port)")
@@ -55,6 +60,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if not args.ipcs_all and not args.input_file:
+        raise SystemExit("--input-file 또는 --ipcs-all 중 하나는 필수입니다")
+
     registry = {}
     if not args.dry_run:
         from source_adapters.registry import build_registry  # lazy import (adapter deps)
@@ -62,7 +70,12 @@ def main() -> int:
         registry = build_registry()
     selected = [s.strip() for s in args.sources.split(",") if s.strip()]
 
-    queries = load_queries(args.input_file)
+    if args.ipcs_all:
+        queries = ["all"]
+        if "ipcs" not in [s.strip() for s in args.sources.split(",") if s.strip()]:
+            raise SystemExit("--ipcs-all 사용 시 --sources 에 ipcs 포함 필요")
+    else:
+        queries = load_queries(args.input_file)
     date_key = datetime.utcnow().strftime("%Y%m%d")
     out_root = args.output_dir / date_key
     out_root.mkdir(parents=True, exist_ok=True)
