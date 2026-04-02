@@ -9,4 +9,4 @@
 각 adapter는 `collect(query, ctx)`를 구현해 `UnifiedRow` 목록을 반환합니다.
 
 - `hcis_adapter.py`: HCIS 웹테이블형 수집기
-- `ipcs_adapter.py`: IPCS(INCHEM) 보고서/레퍼런스형 수집기
+- `ipcs_adapter.py`: IPCS(INCHEM) 보고서/레퍼런스형 수집기 (`query=all`이면 인덱스 링크 전체 수집)

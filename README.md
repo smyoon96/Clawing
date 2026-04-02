@@ -20,6 +20,10 @@ python run_ingestion.py --input-file ./cas_list.csv --sources "hcis,ipcs" --outp
 python run_ingestion.py --input-file ./cas_list.csv --sources "hcis,ipcs" --output-dir ./output --proxy "http://host:port" --retries 3 --backoff-sec 2
 ```
 
+
+IPCS 전체 문서(EHC/PIM/JMPR/JECFA 링크) 수집이 필요하면 질의값에 `all`(또는 `*`)을 넣으세요.
+예: 입력 CSV의 `query` 컬럼에 `all` 1행을 두고 `--sources "ipcs"` 실행.
+
 ## 현재 구현
 - 실행기: `run_ingestion.py`
 - adapter 공통모듈: `source_adapters/base.py`, `source_adapters/utils.py`
