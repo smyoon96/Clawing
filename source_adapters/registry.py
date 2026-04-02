@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from .base import BaseAdapter
-from .iris_adapter import IRISAdapter
+from .hcis_adapter import HCISAdapter
+from .ipcs_adapter import IPCSAdapter
 
 
 def build_registry() -> dict[str, BaseAdapter]:
     return {
-        "iris": IRISAdapter(),
+        "hcis": HCISAdapter(),
+        "ipcs": IPCSAdapter(),
     }

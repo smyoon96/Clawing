@@ -5,29 +5,32 @@
 ## 빠른 실행
 
 ```bash
-python run_ingestion.py --input-file ./cas_list.xlsx --sources "iris" --output-dir ./output
+python run_ingestion.py --input-file ./cas_list.xlsx --sources "hcis,ipcs" --output-dir ./output
 ```
 
 의존성/네트워크 없이 파이프라인만 검증하려면:
 
 ```bash
-python run_ingestion.py --input-file ./cas_list.csv --sources "iris" --output-dir ./output --dry-run
+python run_ingestion.py --input-file ./cas_list.csv --sources "hcis,ipcs" --output-dir ./output --dry-run
 ```
 
 프록시 환경이면:
 
 ```bash
-python run_ingestion.py --input-file ./cas_list.csv --sources "iris" --output-dir ./output --proxy "http://host:port" --retries 3 --backoff-sec 2
+python run_ingestion.py --input-file ./cas_list.csv --sources "hcis,ipcs" --output-dir ./output --proxy "http://host:port" --retries 3 --backoff-sec 2
 ```
+
+
+IPCS 전체 문서(EHC/PIM/JMPR/JECFA 링크) 수집이 필요하면 질의값에 `all`(또는 `*`)을 넣으세요.
+예: 입력 CSV의 `query` 컬럼에 `all` 1행을 두고 `--sources "ipcs"` 실행.
 
 ## 현재 구현
 - 실행기: `run_ingestion.py`
 - adapter 공통모듈: `source_adapters/base.py`, `source_adapters/utils.py`
 - 구현 adapter:
-    - `source_adapters/iris_adapter.py`
+    - `source_adapters/hcis_adapter.py`
+    - `source_adapters/ipcs_adapter.py`
 - registry: `source_adapters/registry.py`
-
-IRIS adapter는 검색 URL이 404일 경우 사이트 검색 URL로 자동 fallback 합니다.
 
 ## 산출물
 - `output/<date>/combined.csv`
