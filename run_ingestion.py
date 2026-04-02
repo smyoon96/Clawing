@@ -45,6 +45,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--sources", default="iris", help="쉼표 구분 source key")
     p.add_argument("--output-dir", type=Path, default=Path("./output"))
     p.add_argument("--timeout-sec", type=float, default=20.0)
+    p.add_argument("--proxy", default="", help="HTTP/HTTPS proxy URL (예: http://user:pass@host:port)")
+    p.add_argument("--retries", type=int, default=2, help="네트워크 재시도 횟수")
+    p.add_argument("--backoff-sec", type=float, default=1.5, help="재시도 백오프(초)")
     p.add_argument("--debug", action="store_true")
     p.add_argument("--dry-run", action="store_true", help="네트워크 호출 없이 파이프라인 검증용 더미 row 생성")
     return p.parse_args()
@@ -67,7 +70,14 @@ def main() -> int:
     all_rows = []
     for q in queries:
         for source_key in selected:
-            ctx = RunContext(evidence_dir=out_root / "evidence", timeout_sec=args.timeout_sec, debug=args.debug)
+            ctx = RunContext(
+                evidence_dir=out_root / "evidence",
+                timeout_sec=args.timeout_sec,
+                debug=args.debug,
+                proxy=args.proxy,
+                retries=args.retries,
+                backoff_sec=args.backoff_sec,
+            )
             try:
                 if args.dry_run:
                     rows = []

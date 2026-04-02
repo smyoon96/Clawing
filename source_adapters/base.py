@@ -10,6 +10,9 @@ class RunContext:
     evidence_dir: Path
     timeout_sec: float = 20.0
     debug: bool = False
+    proxy: str = ""
+    retries: int = 2
+    backoff_sec: float = 1.5
 
 
 @dataclass
