@@ -47,6 +47,12 @@ def test_substance_name_from_label_removes_monograph_tokens():
     assert name.lower() == "clorazepate dipotassium"
 
 
+def test_substance_name_from_label_removes_numeric_prefix():
+    text = ""
+    name = IPCSAdapter._substance_from_label("031. Propionic acid (FAO Nutrition Meetings Report Series 40abc)", text)
+    assert name.lower().startswith("propionic acid")
+
+
 def test_document_and_listing_url_classification():
     assert IPCSAdapter._is_document_url("https://www.inchem.org/documents/pims/chemical/abc.htm")
     assert IPCSAdapter._is_listing_url("https://www.inchem.org/pages/pims.html")
@@ -164,3 +170,17 @@ def test_extract_ehc_endpoint_chunks_and_measurements(tmp_path: Path):
     assert any(r.endpoint == "human_health_hazard_animals" for r in endpoint_rows)
     assert any(r.endpoint == "ecotoxicity" for r in endpoint_rows)
     assert any(r.numeric_value == "2500" and "mg/kg" in r.unit for r in endpoint_rows)
+
+
+def test_toxicity_metric_fallback_extracts_lc50_style_sentence(tmp_path: Path):
+    adapter = IPCSAdapter()
+    html = "<html><body>Most aquatic invertebrates show tolerance; acute LC50 values were > 10 mg/litre.</body></html>"
+    rows = adapter._build_doc_rows(
+        query="x",
+        index_url="https://www.inchem.org/pages/jecfa.html",
+        index_label="Propionic acid",
+        doc_url="https://www.inchem.org/documents/jecfa/jecmono/40abcj13.htm",
+        doc_html=html,
+        evidence_file=tmp_path / "doc.html",
+    )
+    assert any(r.field_name in {"ipcs_reference", "toxicity_metric"} and "mg/litre" in r.raw_value for r in rows)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from run_ipcs_all import main, parse_args
+from run_ipcs_all import build_focused_rows, main, parse_args
 
 
 def test_parse_args_defaults(monkeypatch: pytest.MonkeyPatch):
@@ -27,3 +27,16 @@ def test_main_dry_run_prints_mode_and_note(monkeypatch: pytest.MonkeyPatch, tmp_
     assert rc == 0
     assert '"mode": "dry-run"' in out
     assert '"note": "no_network_crawl_performed"' in out
+    assert '"focused_row_count"' in out
+
+
+def test_build_focused_rows_filters_and_dedups():
+    rows = [
+        {"field_name": "hazard_code", "raw_value": "H351", "evidence_url": "u1"},
+        {"field_name": "hazard_code", "raw_value": "H351", "evidence_url": "u1"},
+        {"field_name": "toxicity_metric", "raw_value": "LC50 > 10 mg/litre", "evidence_url": "u2"},
+        {"field_name": "hazard_summary", "raw_value": "text", "evidence_url": "u1"},
+    ]
+    focused = build_focused_rows(rows)
+    assert len(focused) == 2
+    assert {r["field_name"] for r in focused} == {"hazard_code", "toxicity_metric"}

@@ -58,7 +58,11 @@ python run_ipcs_all.py --output-dir ./output --top-per-index 50
 - `output/<date>/combined.csv`
 - `output/<date>/combined.json`
 - `output/<date>/combined.xlsx`
+- `output/<date>/focused.csv`
+- `output/<date>/focused.json`
 - `output/<date>/evidence/*.html`
+
+`focused.*`는 핵심 유해성 필드(`ehc_endpoint_measurement`, `hazard_code`, `cas_number_detected`, `table_hazard_extract`, `ipcs_reference`, `toxicity_metric`)만 중복 제거해 저장합니다.
 
 참고: IPCS 수집은 스크린샷을 저장하는 방식이 아니라, 각 문서의 원본 HTML 본문을 `evidence/*.html`로 저장하고 `combined.*`에는 해당 근거 파일 경로(`evidence_file`)와 URL(`evidence_url`)을 기록합니다.
 또한 `evidence/manifest.json`에 `etag`, `last_modified`, `content_sha256`를 함께 기록해 다음 수집 시 변경 여부를 비교할 수 있습니다.
