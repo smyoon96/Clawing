@@ -54,6 +54,8 @@ def main() -> int:
                 retrieved_at_utc=datetime.utcnow().isoformat(),
             )
         ]
+        mode = "dry-run"
+        note = "no_network_crawl_performed"
     else:
         ctx = RunContext(
             evidence_dir=out_root / "evidence",
@@ -68,6 +70,8 @@ def main() -> int:
             rows = [asdict(r) for r in adapter.collect_top_per_index(args.top_per_index, ctx)]
         else:
             rows = [asdict(r) for r in adapter.collect("all", ctx)]
+        mode = "live"
+        note = ""
 
     csv_path = out_root / "combined.csv"
     json_path = out_root / "combined.json"
@@ -79,7 +83,15 @@ def main() -> int:
         writer.writerows(rows)
 
     json_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"csv": str(csv_path), "json": str(json_path)}, ensure_ascii=False))
+    payload = {
+        "csv": str(csv_path),
+        "json": str(json_path),
+        "mode": mode,
+        "row_count": len(rows),
+    }
+    if note:
+        payload["note"] = note
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 

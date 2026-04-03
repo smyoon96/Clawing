@@ -44,6 +44,8 @@ python run_ipcs_all.py --output-dir ./output
 python run_ipcs_all.py --output-dir ./output --top-per-index 50
 ```
 
+주의: `--dry-run`은 네트워크 수집을 수행하지 않고 파이프라인/파일쓰기만 검증합니다.
+
 ## 현재 구현
 - 실행기: `run_ingestion.py`
 - adapter 공통모듈: `source_adapters/base.py`, `source_adapters/utils.py`
