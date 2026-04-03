@@ -83,6 +83,9 @@ def resolve_queries(args: argparse.Namespace, selected_sources: list[str]) -> li
 
 def main() -> int:
     args = parse_args()
+    if not args.ipcs_all and not args.input_file:
+        raise SystemExit("--input-file 또는 --ipcs-all 중 하나는 필수입니다")
+
     registry = {}
     if not args.dry_run:
         from source_adapters.registry import build_registry  # lazy import (adapter deps)
