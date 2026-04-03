@@ -60,6 +60,7 @@ python run_ipcs_all.py --output-dir ./output --top-per-index 50
 
 참고: IPCS 수집은 스크린샷을 저장하는 방식이 아니라, 각 문서의 원본 HTML 본문을 `evidence/*.html`로 저장하고 `combined.*`에는 해당 근거 파일 경로(`evidence_file`)와 URL(`evidence_url`)을 기록합니다.
 또한 `evidence/manifest.json`에 `etag`, `last_modified`, `content_sha256`를 함께 기록해 다음 수집 시 변경 여부를 비교할 수 있습니다.
+`manifest.json`에는 메타데이터 외에도 `substance_name`, `detected_cas`, `hazard_codes`, `toxicity_refs_preview`, `hazard_summary_preview`, `extracted_row_count`를 넣어 문서별 핵심 유해성 요약을 바로 확인할 수 있습니다.
 
 ## IPCS 정제 수집 원칙
 - IPCS adapter는 문서 전체를 그대로 row로 적재하지 않고, 유해성 중심 신호만 추출합니다.

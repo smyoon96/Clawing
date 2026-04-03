@@ -107,6 +107,9 @@ def test_collect_writes_manifest_with_content_hash(monkeypatch, tmp_path: Path):
     assert manifest_path.exists()
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert payload and payload[0]["content_sha256"]
+    assert "hazard_summary_preview" in payload[0]
+    assert "toxicity_refs_preview" in payload[0]
+    assert "extracted_row_count" in payload[0]
 
 
 def test_collect_top_per_index_50_each(monkeypatch, tmp_path: Path):

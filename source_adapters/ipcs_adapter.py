@@ -186,25 +186,37 @@ class IPCSAdapter(BaseAdapter):
 
             out_file = evidence_root / f"doc_{i:04d}_{self._safe_token(label) or 'untitled'}.html"
             out_file.write_text(doc_html, encoding="utf-8")
+            doc_rows = self._build_doc_rows(
+                query=query,
+                index_url=index_url,
+                index_label=label or "untitled",
+                doc_url=final_doc_url,
+                doc_html=doc_html,
+                evidence_file=out_file,
+            )
+
+            cas_values = sorted({r.raw_value for r in doc_rows if r.field_name == "cas_number_detected"})
+            hazard_codes = sorted({r.hazard_code or r.raw_value for r in doc_rows if r.field_name == "hazard_code"})
+            tox_refs = [r.raw_value for r in doc_rows if r.field_name in {"ipcs_reference", "table_hazard_extract"}][:5]
+            summary_rows = [r.raw_value for r in doc_rows if r.field_name == "hazard_summary"]
+            substance = next((r.substance_name for r in doc_rows if r.substance_name), self._substance_from_label(label, doc_html))
+
             manifest.append(
                 {
                     "index_url": index_url,
                     "label": label,
                     "doc_url": final_doc_url,
                     "evidence_file": str(out_file),
+                    "substance_name": substance,
+                    "detected_cas": "; ".join(cas_values),
+                    "hazard_codes": "; ".join(hazard_codes),
+                    "toxicity_refs_preview": " || ".join(tox_refs),
+                    "hazard_summary_preview": (summary_rows[0] if summary_rows else ""),
+                    "extracted_row_count": str(len(doc_rows)),
                     **meta,
                 }
             )
-            rows.extend(
-                self._build_doc_rows(
-                    query=query,
-                    index_url=index_url,
-                    index_label=label or "untitled",
-                    doc_url=final_doc_url,
-                    doc_html=doc_html,
-                    evidence_file=out_file,
-                )
-            )
+            rows.extend(doc_rows)
 
         (evidence_root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         return rows
