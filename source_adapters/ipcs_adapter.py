@@ -229,6 +229,70 @@ class IPCSAdapter(BaseAdapter):
         return out
 
     @staticmethod
+    def _is_document_url(url: str) -> bool:
+        u = (url or "").lower()
+        if "inchem.org" not in u:
+            return False
+        if any(x in u for x in ["/documents/", "/monographs/"]):
+            return u.endswith((".htm", ".html", ".pdf")) or "/documents/" in u
+        return False
+
+    @staticmethod
+    def _is_listing_url(url: str) -> bool:
+        u = (url or "").lower()
+        if "inchem.org" not in u:
+            return False
+        if "/pages/" in u:
+            return True
+        return u.endswith(("index.htm", "index.html"))
+
+    def _collect_all_links(self, ctx: RunContext) -> list[tuple[str, str, str]]:
+        queue = list(self.INDEX_URLS)
+        visited: set[str] = set()
+        doc_links: list[tuple[str, str, str]] = []
+        seen_docs: set[str] = set()
+
+        # 인덱스/서브인덱스를 순회하면서 문서 링크를 전수 수집
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+            try:
+                html, final_url = self._fetch(current, ctx.timeout_sec)
+            except Exception:
+                continue
+
+            for label, link in self._extract_links(html, final_url):
+                if self._is_document_url(link):
+                    if link not in seen_docs:
+                        seen_docs.add(link)
+                        doc_links.append((current, label, link))
+                    continue
+                if self._is_listing_url(link) and link not in visited and link not in queue:
+                    queue.append(link)
+
+        return doc_links
+
+    @classmethod
+    def _extract_hazard_sentences(cls, doc_text: str) -> list[str]:
+        candidates = re.split(r"(?<=[.!?])\s+|\n+", doc_text)
+        out: list[str] = []
+        seen: set[str] = set()
+        for sent in candidates:
+            s = " ".join(sent.split()).strip()
+            if len(s) < 30:
+                continue
+            low = s.lower()
+            if any(k in low for k in cls.HAZARD_KEYWORDS):
+                key = s[:220]
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(key)
+        return out
+
+    @staticmethod
     def _is_all_query(query: str) -> bool:
         return query.strip().lower() in {"*", "all", "__all__", "ipcs_all"}
 

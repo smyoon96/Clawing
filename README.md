@@ -32,6 +32,12 @@ python run_ingestion.py --ipcs-all --sources "ipcs" --output-dir ./output
 
 또는 `--sources "ipcs"`만 지정하고 `--input-file`을 생략해도 기본적으로 IPCS 전체 수집(`all`)이 수행됩니다.
 
+만약 로컬 환경에서 `run_ingestion.py`가 여전히 구버전(계속 `--input-file` 강제)이라면 아래 IPCS 전용 실행기를 사용하세요.
+
+```bash
+python run_ipcs_all.py --output-dir ./output
+```
+
 ## 현재 구현
 - 실행기: `run_ingestion.py`
 - adapter 공통모듈: `source_adapters/base.py`, `source_adapters/utils.py`
