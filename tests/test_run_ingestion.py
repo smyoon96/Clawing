@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from run_ingestion import parse_args
+from pathlib import Path
+
+from run_ingestion import load_queries, parse_args
 
 
 def test_parse_args_ipcs_all_without_input_file(monkeypatch: pytest.MonkeyPatch):
@@ -28,3 +30,10 @@ def test_parse_args_version(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     out = capsys.readouterr().out
     assert exc.value.code == 0
     assert "run_ingestion.py" in out
+
+
+def test_load_queries_prefers_substance_over_empty_cas(tmp_path: Path):
+    csv_path = tmp_path / "q.csv"
+    csv_path.write_text("cas,substance\n,benzene\n,acetone\n", encoding="utf-8")
+    queries = load_queries(csv_path)
+    assert queries == ["benzene", "acetone"]
