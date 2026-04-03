@@ -10,6 +10,9 @@ from pathlib import Path
 from source_adapters.base import RunContext
 
 
+APP_VERSION = "2026.04-ipcs-all"
+
+
 def load_queries(input_file: Path) -> list[str]:
     if input_file.suffix.lower() == ".csv":
         with input_file.open("r", encoding="utf-8-sig", newline="") as fp:
@@ -18,10 +21,12 @@ def load_queries(input_file: Path) -> list[str]:
         if not rows:
             return []
         cols = {c.lower(): c for c in rows[0].keys()}
-        for key in ["cas", "cas_number", "query", "substance", "substance_name"]:
+        for key in ["query", "substance", "substance_name", "cas", "cas_number"]:
             if key in cols:
                 real = cols[key]
-                return [str(r.get(real, "")).strip() for r in rows if str(r.get(real, "")).strip()]
+                values = [str(r.get(real, "")).strip() for r in rows if str(r.get(real, "")).strip()]
+                if values:
+                    return values
         raise ValueError("질의 컬럼(cas/cas_number/query/substance/substance_name) 필요")
     elif input_file.suffix.lower() in {".xlsx", ".xls"}:
         try:
@@ -33,16 +38,24 @@ def load_queries(input_file: Path) -> list[str]:
         raise ValueError("input-file은 .xlsx/.xls/.csv만 지원")
 
     cols = {c.lower(): c for c in df.columns}
-    for key in ["cas", "cas_number", "query", "substance", "substance_name"]:
+    for key in ["query", "substance", "substance_name", "cas", "cas_number"]:
         if key in cols:
-            return [str(v).strip() for v in df[cols[key]].dropna().tolist() if str(v).strip()]
+            values = [str(v).strip() for v in df[cols[key]].dropna().tolist() if str(v).strip()]
+            if values:
+                return values
     raise ValueError("질의 컬럼(cas/cas_number/query/substance/substance_name) 필요")
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Multi-source hazard ingestion runner")
-    p.add_argument("--input-file", type=Path, required=True)
+    p.add_argument("--version", action="version", version=f"run_ingestion.py {APP_VERSION}")
+    p.add_argument("--input-file", type=Path, help="질의 CSV/XLSX 파일")
     p.add_argument("--sources", default="hcis", help="쉼표 구분 source key")
+    p.add_argument(
+        "--ipcs-all",
+        action="store_true",
+        help="입력 파일 없이 IPCS(EHC/PIM/JMPR/JECFA) 전체 문서를 수집(query=all)",
+    )
     p.add_argument("--output-dir", type=Path, default=Path("./output"))
     p.add_argument("--timeout-sec", type=float, default=20.0)
     p.add_argument("--proxy", default="", help="HTTP/HTTPS proxy URL (예: http://user:pass@host:port)")
@@ -53,6 +66,21 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def resolve_queries(args: argparse.Namespace, selected_sources: list[str]) -> list[str]:
+    if args.ipcs_all:
+        if "ipcs" not in selected_sources:
+            raise SystemExit("--ipcs-all 사용 시 --sources 에 ipcs 포함 필요")
+        return ["all"]
+
+    if not args.input_file and selected_sources == ["ipcs"]:
+        # IPCS 단일 실행은 입력 파일 없이 전체 수집을 기본값으로 허용
+        return ["all"]
+
+    if not args.input_file:
+        raise SystemExit("--input-file 또는 --ipcs-all 중 하나는 필수입니다")
+    return load_queries(args.input_file)
+
+
 def main() -> int:
     args = parse_args()
     registry = {}
@@ -61,8 +89,7 @@ def main() -> int:
 
         registry = build_registry()
     selected = [s.strip() for s in args.sources.split(",") if s.strip()]
-
-    queries = load_queries(args.input_file)
+    queries = resolve_queries(args, selected)
     date_key = datetime.utcnow().strftime("%Y%m%d")
     out_root = args.output_dir / date_key
     out_root.mkdir(parents=True, exist_ok=True)
