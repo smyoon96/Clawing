@@ -82,6 +82,52 @@ class IPCSAdapter(BaseAdapter):
 
         return out
 
+    @staticmethod
+    def _is_document_url(url: str) -> bool:
+        u = (url or "").lower()
+        if "inchem.org" not in u:
+            return False
+        if any(x in u for x in ["/documents/", "/monographs/"]):
+            return u.endswith((".htm", ".html", ".pdf")) or "/documents/" in u
+        return False
+
+    @staticmethod
+    def _is_listing_url(url: str) -> bool:
+        u = (url or "").lower()
+        if "inchem.org" not in u:
+            return False
+        if "/pages/" in u:
+            return True
+        return u.endswith(("index.htm", "index.html"))
+
+    def _collect_all_links(self, ctx: RunContext) -> list[tuple[str, str, str]]:
+        queue = list(self.INDEX_URLS)
+        visited: set[str] = set()
+        doc_links: list[tuple[str, str, str]] = []
+        seen_docs: set[str] = set()
+
+        # 인덱스/서브인덱스를 순회하면서 문서 링크를 전수 수집
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+            try:
+                html, final_url = self._fetch(current, ctx.timeout_sec)
+            except Exception:
+                continue
+
+            for label, link in self._extract_links(html, final_url):
+                if self._is_document_url(link):
+                    if link not in seen_docs:
+                        seen_docs.add(link)
+                        doc_links.append((current, label, link))
+                    continue
+                if self._is_listing_url(link) and link not in visited and link not in queue:
+                    queue.append(link)
+
+        return doc_links
+
     @classmethod
     def _extract_hazard_sentences(cls, doc_text: str) -> list[str]:
         candidates = re.split(r"(?<=[.!?])\s+|\n+", doc_text)
@@ -276,6 +322,35 @@ class IPCSAdapter(BaseAdapter):
         fetch_all = self._is_all_query(query)
         evidence_root = ctx.evidence_dir / self.source_key / self._safe_token(query)
         evidence_root.mkdir(parents=True, exist_ok=True)
+
+        if fetch_all:
+            selected_links = self._collect_all_links(ctx)
+            if not selected_links:
+                raise RuntimeError("IPCS 전체 수집 링크를 찾지 못했습니다")
+
+            rows: list[UnifiedRow] = []
+            for i, (index_url, label, doc_url) in enumerate(selected_links, start=1):
+                try:
+                    doc_html, final_doc_url = self._fetch(doc_url, ctx.timeout_sec)
+                except Exception:
+                    continue
+
+                out_file = evidence_root / f"doc_{i:04d}_{self._safe_token(label) or 'untitled'}.html"
+                out_file.write_text(doc_html, encoding="utf-8")
+                rows.extend(
+                    self._build_doc_rows(
+                        query=query,
+                        index_url=index_url,
+                        index_label=label or "untitled",
+                        doc_url=final_doc_url,
+                        doc_html=doc_html,
+                        evidence_file=out_file,
+                    )
+                )
+
+            if not rows:
+                raise RuntimeError("IPCS 전체 문서 본문 수집 실패")
+            return rows
 
         index_cache: list[tuple[str, str, str]] = []  # (index_url, html, final_url)
         all_links: list[tuple[str, str, str]] = []  # (index_url, label, doc_url)

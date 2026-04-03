@@ -48,6 +48,7 @@ python run_ingestion.py --ipcs-all --sources "ipcs" --output-dir ./output
 - IPCS adapter는 문서 전체를 그대로 row로 적재하지 않고, 유해성 중심 신호만 추출합니다.
 - 주요 추출 대상: CAS 번호, H/EUH 코드, 독성 수치 키워드(LD50/LC50/NOAEL/LOAEL), 유해성 키워드 기반 요약 문장.
 - IPCS는 CAS 기준 검색보다 물질명 기준 문헌 연결이 일반적이므로, 입력 파일에 `query`/`substance` 컬럼이 있으면 CAS보다 우선 사용합니다.
+- `all`/`*` 수집 모드에서는 EHC/PIM/JMPR/JECFA 인덱스와 하위 listing 페이지를 순회하면서 문서 링크를 하나씩 방문해 수집합니다.
 
 ## Troubleshooting
 - `run_ingestion.py: error: the following arguments are required: --input-file`가 나온다면, 구버전 스크립트를 실행 중일 가능성이 큽니다.
