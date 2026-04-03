@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--backoff-sec", type=float, default=1.5)
     p.add_argument("--debug", action="store_true")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--top-per-index", type=int, default=0, help="각 IPCS 인덱스 상단 N개 문서만 수집")
     return p.parse_args()
 
 
@@ -63,7 +64,10 @@ def main() -> int:
             backoff_sec=args.backoff_sec,
         )
         adapter = IPCSAdapter()
-        rows = [asdict(r) for r in adapter.collect("all", ctx)]
+        if args.top_per_index > 0:
+            rows = [asdict(r) for r in adapter.collect_top_per_index(args.top_per_index, ctx)]
+        else:
+            rows = [asdict(r) for r in adapter.collect("all", ctx)]
 
     csv_path = out_root / "combined.csv"
     json_path = out_root / "combined.json"

@@ -1,3 +1,5 @@
+import json
+
 from source_adapters.ipcs_adapter import IPCSAdapter
 from source_adapters.base import RunContext
 from pathlib import Path
@@ -67,3 +69,70 @@ def test_collect_all_links_crawls_sub_listing(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(adapter, "_fetch", fake_fetch)
     links = adapter._collect_all_links(RunContext(evidence_dir=tmp_path))
     assert any("/documents/pims/chemical/abc.htm" in u for _, _, u in links)
+
+
+def test_extract_table_chunks_reads_rows_with_cells():
+    html = """
+    <table>
+      <tr><th>Endpoint</th><th>Value</th></tr>
+      <tr><td>LD50 (oral, rat)</td><td>240 mg/kg</td></tr>
+      <tr><td>Note</td><td>Severe CNS depression</td></tr>
+    </table>
+    """
+    chunks = IPCSAdapter._extract_table_chunks(html)
+    assert any("LD50" in c and "240 mg/kg" in c for c in chunks)
+    assert any("CNS depression" in c for c in chunks)
+
+
+def test_collect_writes_manifest_with_content_hash(monkeypatch, tmp_path: Path):
+    adapter = IPCSAdapter()
+
+    monkeypatch.setattr(
+        adapter,
+        "_collect_all_links",
+        lambda ctx: [("https://www.inchem.org/pages/pims.html", "Benzene (PIM 001)", "https://www.inchem.org/doc.htm")],
+    )
+
+    def fake_fetch_with_meta(url: str, timeout: float):
+        html = "<html><body>LD50 50 mg/kg toxic effect</body></html>"
+        return html, url, {"url": url, "etag": "abc", "last_modified": "Mon", "content_sha256": IPCSAdapter._content_sha256(html)}
+
+    monkeypatch.setattr(adapter, "_fetch_with_meta", fake_fetch_with_meta)
+
+    ctx = RunContext(evidence_dir=tmp_path)
+    rows = adapter.collect("all", ctx)
+    assert rows
+
+    manifest_path = tmp_path / "ipcs" / "all" / "manifest.json"
+    assert manifest_path.exists()
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert payload and payload[0]["content_sha256"]
+    assert "hazard_summary_preview" in payload[0]
+    assert "toxicity_refs_preview" in payload[0]
+    assert "extracted_row_count" in payload[0]
+
+
+def test_collect_top_per_index_50_each(monkeypatch, tmp_path: Path):
+    adapter = IPCSAdapter()
+
+    def fake_fetch(url: str, timeout: float):
+        # 각 인덱스에 60개 문서 링크 제공(상단 50개만 선택되어야 함)
+        links = []
+        for i in range(1, 61):
+            links.append(f'<a href="/documents/mock/{i:03d}.htm">Substance {i:03d}</a>')
+        return "\n".join(links), url
+
+    fetch_count = {"n": 0}
+
+    def fake_fetch_with_meta(url: str, timeout: float):
+        fetch_count["n"] += 1
+        html = "<html><body>LD50 100 mg/kg toxic</body></html>"
+        return html, url, {"url": url, "etag": "", "last_modified": "", "content_sha256": IPCSAdapter._content_sha256(html)}
+
+    monkeypatch.setattr(adapter, "_fetch", fake_fetch)
+    monkeypatch.setattr(adapter, "_fetch_with_meta", fake_fetch_with_meta)
+
+    rows = adapter.collect_top_per_index(50, RunContext(evidence_dir=tmp_path))
+    assert rows
+    # 4개 인덱스 × 50개 문서
+    assert fetch_count["n"] == 200
