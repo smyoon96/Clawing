@@ -68,6 +68,7 @@ python run_ipcs_all.py --output-dir ./output --top-per-index 50
 - IPCS는 CAS 기준 검색보다 물질명 기준 문헌 연결이 일반적이므로, 입력 파일에 `query`/`substance` 컬럼이 있으면 CAS보다 우선 사용합니다.
 - `all`/`*` 수집 모드에서는 EHC/PIM/JMPR/JECFA 인덱스와 하위 listing 페이지를 순회하면서 문서 링크를 하나씩 방문해 수집합니다.
 - 본문 문장뿐 아니라 HTML 표(`<table>/<tr>/<td>`)에서도 유해성 관련 행(독성 수치, H코드, 위험 키워드 포함)을 추가로 추출합니다.
+- EHC의 `1.1~1.8 SUMMARY` 구조를 인식해 물리화학/인체유해/환경유해 카테고리 endpoint로 분류하고, 수치값(부등호/숫자/단위) 및 섹션 정보(`test_conditions`: `EHC 1.x`)를 함께 추출합니다.
 
 ## Troubleshooting
 - `run_ingestion.py: error: the following arguments are required: --input-file`가 나온다면, 구버전 스크립트를 실행 중일 가능성이 큽니다.

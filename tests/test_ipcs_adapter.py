@@ -136,3 +136,31 @@ def test_collect_top_per_index_50_each(monkeypatch, tmp_path: Path):
     assert rows
     # 4개 인덱스 × 50개 문서
     assert fetch_count["n"] == 200
+
+
+def test_extract_ehc_endpoint_chunks_and_measurements(tmp_path: Path):
+    adapter = IPCSAdapter()
+    html = """
+    <html><body>
+      <h2>1. SUMMARY</h2>
+      <p>1.6 Effects on experimental animals and in vitro test systems</p>
+      <p>LD50 values were always higher than 2500 mg/kg body weight.</p>
+      <p>NAOEL was 2 mg/kg in the diet of rats.</p>
+      <p>1.8 Effects on other organisms in the laboratory and field</p>
+      <p>LC50 values were > 10 mg/litre for most aquatic invertebrates.</p>
+    </body></html>
+    """
+    rows = adapter._build_doc_rows(
+        query="amitrole",
+        index_url="https://www.inchem.org/pages/ehc.html",
+        index_label="Amitrole (EHC 158)",
+        doc_url="https://www.inchem.org/documents/ehc/ehc/ehc158.htm",
+        doc_html=html,
+        evidence_file=tmp_path / "doc.html",
+    )
+
+    endpoint_rows = [r for r in rows if r.field_name == "ehc_endpoint_measurement"]
+    assert endpoint_rows
+    assert any(r.endpoint == "human_health_hazard_animals" for r in endpoint_rows)
+    assert any(r.endpoint == "ecotoxicity" for r in endpoint_rows)
+    assert any(r.numeric_value == "2500" and "mg/kg" in r.unit for r in endpoint_rows)
