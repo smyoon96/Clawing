@@ -4,7 +4,7 @@ import pytest
 
 from pathlib import Path
 
-from run_ingestion import load_queries, parse_args
+from run_ingestion import load_queries, parse_args, resolve_queries
 
 
 def test_parse_args_ipcs_all_without_input_file(monkeypatch: pytest.MonkeyPatch):
@@ -37,3 +37,20 @@ def test_load_queries_prefers_substance_over_empty_cas(tmp_path: Path):
     csv_path.write_text("cas,substance\n,benzene\n,acetone\n", encoding="utf-8")
     queries = load_queries(csv_path)
     assert queries == ["benzene", "acetone"]
+
+
+def test_resolve_queries_defaults_to_all_for_ipcs_only_without_input():
+    class Args:
+        ipcs_all = False
+        input_file = None
+
+    assert resolve_queries(Args(), ["ipcs"]) == ["all"]
+
+
+def test_resolve_queries_requires_input_for_non_ipcs_sources():
+    class Args:
+        ipcs_all = False
+        input_file = None
+
+    with pytest.raises(SystemExit):
+        resolve_queries(Args(), ["hcis"])

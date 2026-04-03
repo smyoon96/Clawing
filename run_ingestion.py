@@ -66,6 +66,21 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def resolve_queries(args: argparse.Namespace, selected_sources: list[str]) -> list[str]:
+    if args.ipcs_all:
+        if "ipcs" not in selected_sources:
+            raise SystemExit("--ipcs-all 사용 시 --sources 에 ipcs 포함 필요")
+        return ["all"]
+
+    if not args.input_file and selected_sources == ["ipcs"]:
+        # IPCS 단일 실행은 입력 파일 없이 전체 수집을 기본값으로 허용
+        return ["all"]
+
+    if not args.input_file:
+        raise SystemExit("--input-file 또는 --ipcs-all 중 하나는 필수입니다")
+    return load_queries(args.input_file)
+
+
 def main() -> int:
     args = parse_args()
     if not args.ipcs_all and not args.input_file:
@@ -77,13 +92,7 @@ def main() -> int:
 
         registry = build_registry()
     selected = [s.strip() for s in args.sources.split(",") if s.strip()]
-
-    if args.ipcs_all:
-        queries = ["all"]
-        if "ipcs" not in [s.strip() for s in args.sources.split(",") if s.strip()]:
-            raise SystemExit("--ipcs-all 사용 시 --sources 에 ipcs 포함 필요")
-    else:
-        queries = load_queries(args.input_file)
+    queries = resolve_queries(args, selected)
     date_key = datetime.utcnow().strftime("%Y%m%d")
     out_root = args.output_dir / date_key
     out_root.mkdir(parents=True, exist_ok=True)
