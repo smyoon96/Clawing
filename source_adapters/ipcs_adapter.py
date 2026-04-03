@@ -82,6 +82,24 @@ class IPCSAdapter(BaseAdapter):
 
         return out
 
+    @classmethod
+    def _extract_hazard_sentences(cls, doc_text: str) -> list[str]:
+        candidates = re.split(r"(?<=[.!?])\s+|\n+", doc_text)
+        out: list[str] = []
+        seen: set[str] = set()
+        for sent in candidates:
+            s = " ".join(sent.split()).strip()
+            if len(s) < 30:
+                continue
+            low = s.lower()
+            if any(k in low for k in cls.HAZARD_KEYWORDS):
+                key = s[:220]
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(key)
+        return out
+
     @staticmethod
     def _is_document_url(url: str) -> bool:
         u = (url or "").lower()
